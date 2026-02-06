@@ -2,266 +2,170 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Market Rush Drive</title>
+<title>Car Mini Game</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
-* { box-sizing: border-box; }
-
-body {
+html, body {
     margin: 0;
-    background: #0b0b0b;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(180deg, #0f2027, #203a43, #2c5364);
     overflow: hidden;
-    font-family: -apple-system, BlinkMacSystemFont, Arial;
+    font-family: Arial, sans-serif;
 }
 
-/* ===== GAME ===== */
 #game {
+    position: relative;
     width: 100vw;
     height: 100vh;
-    position: relative;
 }
 
-/* ===== ROAD ===== */
 #road {
-    width: 72vw;
-    max-width: 420px;
-    height: 100vh;
-    margin: auto;
-    background: linear-gradient(#3b3b3b, #1e1e1e);
-    position: relative;
-    overflow: hidden;
-    box-shadow: 0 0 60px rgba(0,0,0,.9);
-}
-
-/* ===== LINES ===== */
-.line {
     position: absolute;
-    width: 10px;
-    height: 70px;
-    background: linear-gradient(#fff, #ccc);
-    left: 50%;
-    transform: translateX(-50%);
-    border-radius: 6px;
-    opacity: .85;
+    width: 60%;
+    height: 100%;
+    background: #2b2b2b;
+    left: 20%;
+    box-shadow: inset 0 0 40px rgba(0,0,0,0.8);
 }
 
-/* ===== CAR ===== */
 #car {
-    width: 62px;
-    height: 112px;
     position: absolute;
-    bottom: 24px;
-    background: linear-gradient(#ff4d4d, #b00000);
-    border-radius: 16px;
-    box-shadow: 0 14px 40px rgba(0,0,0,.7);
-}
-
-#car::before {
-    content: "";
-    position: absolute;
-    top: 8px;
-    left: 8px;
-    right: 8px;
-    height: 20px;
-    background: rgba(255,255,255,.25);
-    border-radius: 12px;
-}
-
-/* ===== ENEMY ===== */
-.enemy {
-    width: 62px;
-    height: 112px;
-    position: absolute;
-    top: -140px;
-    background: linear-gradient(#777, #444);
-    border-radius: 16px;
-    box-shadow: 0 14px 40px rgba(0,0,0,.7);
-}
-
-/* ===== HUD ===== */
-#hud {
-    position: absolute;
-    top: 14px;
+    width: 60px;
+    height: 100px;
+    background: red;
+    bottom: 30px;
     left: 50%;
     transform: translateX(-50%);
-    background: rgba(0,0,0,.55);
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.6);
+    transition: left 0.15s ease;
+}
+
+.obstacle {
+    position: absolute;
+    width: 60px;
+    height: 100px;
+    background: #ffcc00;
+    top: -120px;
+    border-radius: 12px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.6);
+}
+
+#ui {
+    position: absolute;
+    top: 20px;
+    left: 20px;
     color: #fff;
-    padding: 6px 16px;
-    border-radius: 20px;
     font-size: 20px;
 }
 
-/* ===== OVERLAYS ===== */
-.overlay {
+#start {
     position: absolute;
-    inset: 0;
-    background: rgba(0,0,0,.75);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #fff;
-    z-index: 10;
-}
-
-.panel {
-    background: #1c1c1c;
-    padding: 26px;
-    border-radius: 20px;
-    text-align: center;
-    width: 80%;
-    max-width: 320px;
-    box-shadow: 0 0 40px rgba(0,0,0,.9);
-}
-
-.panel h1 {
-    margin: 0 0 12px;
-    font-size: 26px;
-}
-
-.btn {
-    margin-top: 18px;
-    padding: 12px;
-    background: #ff4d4d;
-    border-radius: 14px;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 15px 40px;
+    font-size: 20px;
+    border: none;
+    border-radius: 30px;
+    background: #00e676;
+    color: #000;
     cursor: pointer;
-    font-size: 18px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.5);
 }
 </style>
 </head>
 
 <body>
 <div id="game">
-    <div id="road">
-        <div id="hud">0</div>
-        <div id="car"></div>
-    </div>
-
-    <!-- START -->
-    <div class="overlay" id="start">
-        <div class="panel">
-            <h1>🚗 Market Rush Drive</h1>
-            <div>Тапай слева / справа<br>Уклоняйся от машин</div>
-            <div class="btn" onclick="startGame()">Начать</div>
-        </div>
-    </div>
-
-    <!-- GAME OVER -->
-    <div class="overlay" id="over" style="display:none">
-        <div class="panel">
-            <h1>💥 Авария</h1>
-            <div id="final"></div>
-            <div class="btn" onclick="restart()">Играть ещё</div>
-        </div>
-    </div>
+    <div id="road"></div>
+    <div id="car"></div>
+    <div id="ui">Очки: <span id="score">0</span></div>
+    <button id="start">▶ Старт</button>
 </div>
 
 <script>
-const road = document.getElementById("road");
 const car = document.getElementById("car");
-const hud = document.getElementById("hud");
-const startScreen = document.getElementById("start");
-const overScreen = document.getElementById("over");
-const finalText = document.getElementById("final");
+const road = document.getElementById("road");
+const scoreEl = document.getElementById("score");
+const startBtn = document.getElementById("start");
 
-let lanes = [];
-let lane = 1;
-let speed = 4;
+let carX = 50;
 let score = 0;
-let enemies = [];
-let lines = [];
-let running = false;
+let speed = 2; // 👈 МЕДЛЕННАЯ СКОРОСТЬ (ЛЕГКО)
+let playing = false;
+let obstacles = [];
 
-/* ===== LANES ===== */
-function setupLanes() {
-    const w = road.offsetWidth;
-    lanes = [w*0.2-31, w*0.5-31, w*0.8-31];
-    car.style.left = lanes[lane] + "px";
-}
-window.addEventListener("resize", setupLanes);
-setupLanes();
+document.addEventListener("keydown", e => {
+    if (!playing) return;
+    if (e.key === "ArrowLeft") carX -= 10;
+    if (e.key === "ArrowRight") carX += 10;
 
-/* ===== LINES ===== */
-for (let i=0;i<14;i++) {
-    let l = document.createElement("div");
-    l.className = "line";
-    l.style.top = i*90 + "px";
-    road.appendChild(l);
-    lines.push(l);
-}
-
-/* ===== CONTROL ===== */
-document.addEventListener("click", e => {
-    if (!running) return;
-    if (e.clientX < window.innerWidth/2 && lane>0) lane--;
-    if (e.clientX >= window.innerWidth/2 && lane<2) lane++;
-    car.style.left = lanes[lane] + "px";
+    carX = Math.max(22, Math.min(78, carX));
+    car.style.left = carX + "%";
 });
 
-/* ===== ENEMY ===== */
-function spawnEnemy() {
-    let e = document.createElement("div");
-    e.className = "enemy";
-    let l = Math.floor(Math.random()*3);
-    e.style.left = lanes[l] + "px";
-    road.appendChild(e);
-    enemies.push({el:e,lane:l});
+function createObstacle() {
+    const obs = document.createElement("div");
+    obs.className = "obstacle";
+    obs.style.left = (22 + Math.random() * 56) + "%";
+    road.appendChild(obs);
+    obstacles.push(obs);
 }
 
-/* ===== LOOP ===== */
-function loop() {
-    if (!running) return;
+function gameLoop() {
+    if (!playing) return;
 
     score++;
-    hud.textContent = "Очки: " + score;
+    scoreEl.textContent = score;
 
-    if (score % 300 === 0) speed += 0.5;
-    if (Math.random() < 0.025) spawnEnemy();
+    if (Math.random() < 0.02) createObstacle(); // 👈 РЕДКО (ЛЕГКО)
 
-    lines.forEach(l => {
-        l.style.top = l.offsetTop + speed + "px";
-        if (l.offsetTop > window.innerHeight) l.style.top = "-80px";
-    });
+    obstacles.forEach((obs, i) => {
+        let top = obs.offsetTop + speed;
+        obs.style.top = top + "px";
 
-    enemies.forEach((o,i) => {
-        o.el.style.top = o.el.offsetTop + speed + "px";
-        if (o.el.offsetTop > window.innerHeight) {
-            o.el.remove();
-            enemies.splice(i,1);
+        if (top > window.innerHeight) {
+            obs.remove();
+            obstacles.splice(i, 1);
         }
-        if (o.lane === lane && o.el.offsetTop > window.innerHeight-160) {
+
+        const carRect = car.getBoundingClientRect();
+        const obsRect = obs.getBoundingClientRect();
+
+        if (
+            carRect.left < obsRect.right &&
+            carRect.right > obsRect.left &&
+            carRect.top < obsRect.bottom &&
+            carRect.bottom > obsRect.top
+        ) {
             endGame();
         }
     });
 
-    requestAnimationFrame(loop);
+    requestAnimationFrame(gameLoop);
 }
 
-/* ===== GAME FLOW ===== */
 function startGame() {
-    startScreen.style.display = "none";
-    running = true;
-    loop();
+    score = 0;
+    obstacles.forEach(o => o.remove());
+    obstacles = [];
+    scoreEl.textContent = "0";
+    playing = true;
+    startBtn.style.display = "none";
+    gameLoop();
 }
 
 function endGame() {
-    running = false;
-    let best = Math.max(score, localStorage.getItem("best")||0);
-    localStorage.setItem("best", best);
-
-    finalText.innerHTML =
-        `Очки: <b>${score}</b><br>Рекорд: <b>${best}</b>`;
-
-    if (window.Telegram?.WebApp) {
-        Telegram.WebApp.sendData(JSON.stringify({score, best}));
-    }
-
-    overScreen.style.display = "flex";
+    playing = false;
+    alert("Игра окончена! Очки: " + score);
+    startBtn.style.display = "block";
 }
 
-function restart() {
-    location.reload();
-}
+startBtn.onclick = startGame;
 </script>
 </body>
 </html>
