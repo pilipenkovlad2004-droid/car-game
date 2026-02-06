@@ -3,11 +3,16 @@
 <head>
 <meta charset="UTF-8">
 <title>Car Rush</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+
+<meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 
 <style>
 * {
     box-sizing: border-box;
+    user-select: none;
+    -webkit-user-select: none;
     touch-action: manipulation;
 }
 
@@ -18,7 +23,7 @@ html, body {
     height: 100%;
     background: radial-gradient(circle at top, #1e3c72, #0f2027);
     overflow: hidden;
-    font-family: system-ui, sans-serif;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 #game {
@@ -27,71 +32,92 @@ html, body {
     height: 100vh;
 }
 
+/* ===== ДОРОГА ===== */
 #road {
     position: absolute;
-    width: 70%;
+    width: 72%;
     height: 100%;
-    left: 15%;
+    left: 14%;
     background: repeating-linear-gradient(
-        #2c2c2c 0px,
-        #2c2c2c 40px,
-        #3a3a3a 40px,
-        #3a3a3a 80px
+        #2a2a2a 0px,
+        #2a2a2a 50px,
+        #333 50px,
+        #333 100px
     );
-    box-shadow: inset 0 0 60px rgba(0,0,0,.8);
+    box-shadow: inset 0 0 80px rgba(0,0,0,.85);
 }
 
+/* ===== МАШИНА ===== */
 #car {
     position: absolute;
     width: 64px;
     height: 110px;
-    bottom: 30px;
+    bottom: 28px;
     left: 50%;
     transform: translateX(-50%);
     background: linear-gradient(180deg, #ff5252, #b71c1c);
-    border-radius: 16px;
-    box-shadow: 0 15px 30px rgba(0,0,0,.7);
-    transition: left 0.2s cubic-bezier(.25,.8,.25,1);
+    border-radius: 18px;
+    box-shadow:
+        0 18px 35px rgba(0,0,0,.75),
+        inset 0 0 10px rgba(255,255,255,.25);
+    transition: left 0.18s cubic-bezier(.25,.8,.25,1);
 }
 
+/* ===== ПРЕПЯТСТВИЯ ===== */
 .obstacle {
     position: absolute;
     width: 64px;
     height: 110px;
     top: -140px;
     background: linear-gradient(180deg, #ffd740, #ff6f00);
-    border-radius: 16px;
-    box-shadow: 0 10px 25px rgba(0,0,0,.7);
+    border-radius: 18px;
+    box-shadow:
+        0 15px 30px rgba(0,0,0,.7),
+        inset 0 0 10px rgba(255,255,255,.3);
 }
 
+/* ===== HUD ===== */
 #hud {
     position: absolute;
-    top: 15px;
-    left: 15px;
+    top: 14px;
+    left: 14px;
     color: #fff;
-    font-size: 20px;
-    text-shadow: 0 2px 5px rgba(0,0,0,.7);
+    font-size: 18px;
+    line-height: 1.4;
+    text-shadow: 0 2px 6px rgba(0,0,0,.8);
 }
 
+/* ===== МЕНЮ ===== */
 #menu {
     position: absolute;
     inset: 0;
-    background: linear-gradient(180deg, rgba(0,0,0,.6), rgba(0,0,0,.9));
+    background: linear-gradient(
+        180deg,
+        rgba(0,0,0,.55),
+        rgba(0,0,0,.9)
+    );
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    color: white;
+    color: #fff;
+    gap: 20px;
+}
+
+#menu h1 {
+    margin: 0;
+    font-size: 32px;
+    letter-spacing: 1px;
 }
 
 button {
-    padding: 16px 50px;
+    padding: 16px 56px;
     font-size: 22px;
     border-radius: 40px;
     border: none;
     background: linear-gradient(180deg, #00e676, #00c853);
-    color: black;
-    box-shadow: 0 8px 25px rgba(0,0,0,.6);
+    color: #000;
+    box-shadow: 0 10px 30px rgba(0,0,0,.65);
 }
 </style>
 </head>
@@ -121,22 +147,28 @@ const menu = document.getElementById("menu");
 const startBtn = document.getElementById("start");
 
 let carX = 50;
-let speed = 2;
+let speed = 1.9;      // 👈 легче
 let score = 0;
 let playing = false;
 let obstacles = [];
 
 bestEl.textContent = localStorage.getItem("best") || 0;
 
+/* ===== УПРАВЛЕНИЕ (ТАЧ) ===== */
 document.addEventListener("pointerdown", e => {
     if (!playing) return;
-    if (e.clientX < window.innerWidth / 2) carX -= 10;
-    else carX += 10;
+
+    if (e.clientX < window.innerWidth / 2) {
+        carX -= 9;
+    } else {
+        carX += 9;
+    }
 
     carX = Math.max(20, Math.min(80, carX));
     car.style.left = carX + "%";
 });
 
+/* ===== ПРЕПЯТСТВИЯ ===== */
 function spawnObstacle() {
     const o = document.createElement("div");
     o.className = "obstacle";
@@ -145,14 +177,15 @@ function spawnObstacle() {
     obstacles.push(o);
 }
 
+/* ===== ИГРОВОЙ ЦИКЛ ===== */
 function loop() {
     if (!playing) return;
 
     score++;
     scoreEl.textContent = score;
 
-    if (score % 300 === 0 && speed < 5) speed += 0.3; // медленный рост сложности
-    if (Math.random() < 0.02) spawnObstacle();
+    if (score % 400 === 0 && speed < 4) speed += 0.25; // медленный рост
+    if (Math.random() < 0.018) spawnObstacle();       // редко
 
     obstacles.forEach((o, i) => {
         o.style.top = o.offsetTop + speed + "px";
@@ -168,17 +201,25 @@ function loop() {
     requestAnimationFrame(loop);
 }
 
+/* ===== СТОЛКНОВЕНИЕ ===== */
 function hit(a, b) {
     const r1 = a.getBoundingClientRect();
     const r2 = b.getBoundingClientRect();
-    return !(r1.right < r2.left || r1.left > r2.right || r1.bottom < r2.top || r1.top > r2.bottom);
+    return !(
+        r1.right < r2.left ||
+        r1.left > r2.right ||
+        r1.bottom < r2.top ||
+        r1.top > r2.bottom
+    );
 }
 
+/* ===== СТАРТ / КОНЕЦ ===== */
 function startGame() {
     score = 0;
-    speed = 2;
+    speed = 1.9;
     obstacles.forEach(o => o.remove());
     obstacles = [];
+    scoreEl.textContent = "0";
     menu.style.display = "none";
     playing = true;
     loop();
@@ -186,10 +227,11 @@ function startGame() {
 
 function gameOver() {
     playing = false;
-    if (score > bestEl.textContent) {
-        localStorage.setItem("best", score);
-        bestEl.textContent = score;
-    }
+
+    const best = Math.max(score, bestEl.textContent);
+    localStorage.setItem("best", best);
+    bestEl.textContent = best;
+
     menu.style.display = "flex";
 }
 
