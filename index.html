@@ -2,65 +2,110 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Market Rush Drive</title>
 
 <style>
+* {
+    box-sizing: border-box;
+}
+
 body {
     margin: 0;
-    background: #0e0e0e;
+    background: #0d0d0d;
     overflow: hidden;
     font-family: Arial, sans-serif;
 }
 
-#road {
-    width: 320px;
+/* ===== ИГРОВОЙ ЭКРАН ===== */
+#game {
+    width: 100vw;
     height: 100vh;
-    margin: auto;
-    background: #2b2b2b;
     position: relative;
     overflow: hidden;
 }
 
+/* ===== ДОРОГА ===== */
+#road {
+    width: 70vw;
+    max-width: 420px;
+    height: 100vh;
+    background: linear-gradient(#3a3a3a, #1f1f1f);
+    margin: auto;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 0 40px rgba(0,0,0,0.8);
+}
+
+/* ===== РАЗМЕТКА ===== */
 .line {
     position: absolute;
-    width: 8px;
-    height: 40px;
-    background: #f5f5f5;
-    left: 156px;
+    width: 10px;
+    height: 60px;
+    background: linear-gradient(#fff, #ccc);
+    left: 50%;
+    transform: translateX(-50%);
+    border-radius: 5px;
+    opacity: 0.9;
 }
 
+/* ===== МАШИНА ===== */
 #car {
-    width: 52px;
-    height: 96px;
-    background: linear-gradient(#ff3b3b, #b30000);
+    width: 60px;
+    height: 110px;
     position: absolute;
     bottom: 20px;
-    left: 134px;
-    border-radius: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(180deg, #ff5252, #b00000);
+    border-radius: 14px;
+    box-shadow: 0 12px 30px rgba(0,0,0,0.6);
 }
 
-.enemy {
-    width: 52px;
-    height: 96px;
-    background: linear-gradient(#7a7a7a, #444);
+#car::before {
+    content: "";
     position: absolute;
-    top: -120px;
-    border-radius: 12px;
+    top: 8px;
+    left: 8px;
+    right: 8px;
+    height: 18px;
+    background: rgba(255,255,255,0.25);
+    border-radius: 10px;
 }
 
+/* ===== ВРАГИ ===== */
+.enemy {
+    width: 60px;
+    height: 110px;
+    position: absolute;
+    top: -140px;
+    background: linear-gradient(180deg, #777, #444);
+    border-radius: 14px;
+    box-shadow: 0 12px 30px rgba(0,0,0,0.6);
+}
+
+/* ===== HUD ===== */
 #hud {
     position: absolute;
-    top: 10px;
-    left: 10px;
-    color: white;
+    top: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: #fff;
+    font-size: 20px;
+    background: rgba(0,0,0,0.5);
+    padding: 6px 14px;
+    border-radius: 20px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.6);
 }
 </style>
 </head>
 
 <body>
-<div id="road">
-    <div id="hud">0</div>
-    <div id="car"></div>
+<div id="game">
+    <div id="road">
+        <div id="hud">0</div>
+        <div id="car"></div>
+    </div>
 </div>
 
 <script>
@@ -68,52 +113,70 @@ let road = document.getElementById("road");
 let car = document.getElementById("car");
 let hud = document.getElementById("hud");
 
-let carX = 134;
-let speed = 3;
+let lanes = [];
+let laneX = [];
+let carLane = 1;
+
 let score = 0;
+let speed = 4;
 let enemies = [];
 let lines = [];
 
-function createLine(y) {
+/* ===== ПОЛОСЫ ===== */
+function setupLanes() {
+    let w = road.offsetWidth;
+    laneX = [
+        w * 0.2 - 30,
+        w * 0.5 - 30,
+        w * 0.8 - 30
+    ];
+    car.style.left = laneX[carLane] + "px";
+}
+
+window.addEventListener("resize", setupLanes);
+setupLanes();
+
+/* ===== РАЗМЕТКА ===== */
+for (let i = 0; i < 15; i++) {
     let l = document.createElement("div");
     l.className = "line";
-    l.style.top = y + "px";
+    l.style.top = (i * 80) + "px";
     road.appendChild(l);
     lines.push(l);
 }
 
-for (let i = 0; i < 20; i++) {
-    createLine(i * 60);
-}
-
+/* ===== УПРАВЛЕНИЕ ===== */
 document.addEventListener("click", e => {
-    let w = window.innerWidth;
-    if (e.clientX < w / 2 && carX > 60) carX -= 80;
-    if (e.clientX >= w / 2 && carX < 220) carX += 80;
-    car.style.left = carX + "px";
+    if (e.clientX < window.innerWidth / 2 && carLane > 0) carLane--;
+    if (e.clientX >= window.innerWidth / 2 && carLane < 2) carLane++;
+    car.style.left = laneX[carLane] + "px";
 });
 
+/* ===== ВРАГИ ===== */
 function spawnEnemy() {
     let e = document.createElement("div");
     e.className = "enemy";
-    e.style.left = Math.random() > 0.5 ? "60px" : "220px";
+    let lane = Math.floor(Math.random() * 3);
+    e.style.left = laneX[lane] + "px";
     road.appendChild(e);
-    enemies.push(e);
+    enemies.push({el: e, lane});
 }
 
+/* ===== ЦИКЛ ===== */
 function loop() {
     score++;
     hud.innerText = "Очки: " + score;
 
-    if (score % 300 === 0) speed += 0.4;
+    if (score % 300 === 0) speed += 0.5;
     if (Math.random() < 0.025) spawnEnemy();
 
     lines.forEach(l => {
         l.style.top = (l.offsetTop + speed) + "px";
-        if (l.offsetTop > window.innerHeight) l.style.top = "-40px";
+        if (l.offsetTop > window.innerHeight) l.style.top = "-60px";
     });
 
-    enemies.forEach((e, i) => {
+    enemies.forEach((obj, i) => {
+        let e = obj.el;
         e.style.top = (e.offsetTop + speed) + "px";
 
         if (e.offsetTop > window.innerHeight) {
@@ -122,8 +185,8 @@ function loop() {
         }
 
         if (
-            e.offsetTop + 90 > window.innerHeight - 120 &&
-            Math.abs(e.offsetLeft - carX) < 50
+            e.offsetTop + 100 > window.innerHeight - 140 &&
+            obj.lane === carLane
         ) {
             endGame();
         }
@@ -132,9 +195,10 @@ function loop() {
     requestAnimationFrame(loop);
 }
 
+/* ===== GAME OVER ===== */
 function endGame() {
     Telegram.WebApp.sendData(JSON.stringify({ score }));
-    alert("💥 Столкновение!\nОчки: " + score);
+    alert("💥 Авария!\nОчки: " + score);
     location.reload();
 }
 
