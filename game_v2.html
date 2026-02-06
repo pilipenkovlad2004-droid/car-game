@@ -2,18 +2,23 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<title>Car Mini Game</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Car Rush</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 
 <style>
+* {
+    box-sizing: border-box;
+    touch-action: manipulation;
+}
+
 html, body {
     margin: 0;
     padding: 0;
     width: 100%;
     height: 100%;
-    background: linear-gradient(180deg, #0f2027, #203a43, #2c5364);
+    background: radial-gradient(circle at top, #1e3c72, #0f2027);
     overflow: hidden;
-    font-family: Arial, sans-serif;
+    font-family: system-ui, sans-serif;
 }
 
 #game {
@@ -24,57 +29,69 @@ html, body {
 
 #road {
     position: absolute;
-    width: 60%;
+    width: 70%;
     height: 100%;
-    background: #2b2b2b;
-    left: 20%;
-    box-shadow: inset 0 0 40px rgba(0,0,0,0.8);
+    left: 15%;
+    background: repeating-linear-gradient(
+        #2c2c2c 0px,
+        #2c2c2c 40px,
+        #3a3a3a 40px,
+        #3a3a3a 80px
+    );
+    box-shadow: inset 0 0 60px rgba(0,0,0,.8);
 }
 
 #car {
     position: absolute;
-    width: 60px;
-    height: 100px;
-    background: red;
+    width: 64px;
+    height: 110px;
     bottom: 30px;
     left: 50%;
     transform: translateX(-50%);
-    border-radius: 12px;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.6);
-    transition: left 0.15s ease;
+    background: linear-gradient(180deg, #ff5252, #b71c1c);
+    border-radius: 16px;
+    box-shadow: 0 15px 30px rgba(0,0,0,.7);
+    transition: left 0.2s cubic-bezier(.25,.8,.25,1);
 }
 
 .obstacle {
     position: absolute;
-    width: 60px;
-    height: 100px;
-    background: #ffcc00;
-    top: -120px;
-    border-radius: 12px;
-    box-shadow: 0 8px 20px rgba(0,0,0,0.6);
+    width: 64px;
+    height: 110px;
+    top: -140px;
+    background: linear-gradient(180deg, #ffd740, #ff6f00);
+    border-radius: 16px;
+    box-shadow: 0 10px 25px rgba(0,0,0,.7);
 }
 
-#ui {
+#hud {
     position: absolute;
-    top: 20px;
-    left: 20px;
+    top: 15px;
+    left: 15px;
     color: #fff;
     font-size: 20px;
+    text-shadow: 0 2px 5px rgba(0,0,0,.7);
 }
 
-#start {
+#menu {
     position: absolute;
-    bottom: 30px;
-    left: 50%;
-    transform: translateX(-50%);
-    padding: 15px 40px;
-    font-size: 20px;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(0,0,0,.6), rgba(0,0,0,.9));
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    color: white;
+}
+
+button {
+    padding: 16px 50px;
+    font-size: 22px;
+    border-radius: 40px;
     border: none;
-    border-radius: 30px;
-    background: #00e676;
-    color: #000;
-    cursor: pointer;
-    box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+    background: linear-gradient(180deg, #00e676, #00c853);
+    color: black;
+    box-shadow: 0 8px 25px rgba(0,0,0,.6);
 }
 </style>
 </head>
@@ -83,86 +100,97 @@ html, body {
 <div id="game">
     <div id="road"></div>
     <div id="car"></div>
-    <div id="ui">Очки: <span id="score">0</span></div>
-    <button id="start">▶ Старт</button>
+
+    <div id="hud">
+        Очки: <span id="score">0</span><br>
+        Рекорд: <span id="best">0</span>
+    </div>
+
+    <div id="menu">
+        <h1>🚗 CAR RUSH</h1>
+        <button id="start">СТАРТ</button>
+    </div>
 </div>
 
 <script>
 const car = document.getElementById("car");
 const road = document.getElementById("road");
 const scoreEl = document.getElementById("score");
+const bestEl = document.getElementById("best");
+const menu = document.getElementById("menu");
 const startBtn = document.getElementById("start");
 
 let carX = 50;
+let speed = 2;
 let score = 0;
-let speed = 2; // 👈 МЕДЛЕННАЯ СКОРОСТЬ (ЛЕГКО)
 let playing = false;
 let obstacles = [];
 
-document.addEventListener("keydown", e => {
-    if (!playing) return;
-    if (e.key === "ArrowLeft") carX -= 10;
-    if (e.key === "ArrowRight") carX += 10;
+bestEl.textContent = localStorage.getItem("best") || 0;
 
-    carX = Math.max(22, Math.min(78, carX));
+document.addEventListener("pointerdown", e => {
+    if (!playing) return;
+    if (e.clientX < window.innerWidth / 2) carX -= 10;
+    else carX += 10;
+
+    carX = Math.max(20, Math.min(80, carX));
     car.style.left = carX + "%";
 });
 
-function createObstacle() {
-    const obs = document.createElement("div");
-    obs.className = "obstacle";
-    obs.style.left = (22 + Math.random() * 56) + "%";
-    road.appendChild(obs);
-    obstacles.push(obs);
+function spawnObstacle() {
+    const o = document.createElement("div");
+    o.className = "obstacle";
+    o.style.left = (20 + Math.random() * 60) + "%";
+    road.appendChild(o);
+    obstacles.push(o);
 }
 
-function gameLoop() {
+function loop() {
     if (!playing) return;
 
     score++;
     scoreEl.textContent = score;
 
-    if (Math.random() < 0.02) createObstacle(); // 👈 РЕДКО (ЛЕГКО)
+    if (score % 300 === 0 && speed < 5) speed += 0.3; // медленный рост сложности
+    if (Math.random() < 0.02) spawnObstacle();
 
-    obstacles.forEach((obs, i) => {
-        let top = obs.offsetTop + speed;
-        obs.style.top = top + "px";
+    obstacles.forEach((o, i) => {
+        o.style.top = o.offsetTop + speed + "px";
 
-        if (top > window.innerHeight) {
-            obs.remove();
+        if (o.offsetTop > window.innerHeight) {
+            o.remove();
             obstacles.splice(i, 1);
         }
 
-        const carRect = car.getBoundingClientRect();
-        const obsRect = obs.getBoundingClientRect();
-
-        if (
-            carRect.left < obsRect.right &&
-            carRect.right > obsRect.left &&
-            carRect.top < obsRect.bottom &&
-            carRect.bottom > obsRect.top
-        ) {
-            endGame();
-        }
+        if (hit(car, o)) gameOver();
     });
 
-    requestAnimationFrame(gameLoop);
+    requestAnimationFrame(loop);
+}
+
+function hit(a, b) {
+    const r1 = a.getBoundingClientRect();
+    const r2 = b.getBoundingClientRect();
+    return !(r1.right < r2.left || r1.left > r2.right || r1.bottom < r2.top || r1.top > r2.bottom);
 }
 
 function startGame() {
     score = 0;
+    speed = 2;
     obstacles.forEach(o => o.remove());
     obstacles = [];
-    scoreEl.textContent = "0";
+    menu.style.display = "none";
     playing = true;
-    startBtn.style.display = "none";
-    gameLoop();
+    loop();
 }
 
-function endGame() {
+function gameOver() {
     playing = false;
-    alert("Игра окончена! Очки: " + score);
-    startBtn.style.display = "block";
+    if (score > bestEl.textContent) {
+        localStorage.setItem("best", score);
+        bestEl.textContent = score;
+    }
+    menu.style.display = "flex";
 }
 
 startBtn.onclick = startGame;
